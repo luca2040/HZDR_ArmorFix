@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+x64/
 
 # Precompiled Headers
 *.gch
@@ -36,9 +37,21 @@
 *.exe
 *.out
 *.app
+*.exp
 
 # debug information files
 *.dwo
 
 # vscode
 .vscode/
+
+# visual studio
+.vs/
+*.user
+
+# build
+build/
+output/
+
+# libraries
+!HZDR_ArmorFix/src/external/minhook/lib/*.lib

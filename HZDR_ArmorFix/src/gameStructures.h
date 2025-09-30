@@ -1,3 +1,6 @@
+#pragma once
+#include <cstdint>
+
 struct EquipementSlotComponent
 {
   char _pad0[0x88];              // 0x00
@@ -45,3 +48,11 @@ struct Menu
   void *_unk2;                          // 0x38
   ViewControllers *menuViewControllers; // 0x40
 };
+
+// All the offsets in this test refer to version 1.5.89.0 from the Epic Games store
+
+typedef bool (*updateTransmog_t)(EquipementViewController *playerViewController, char *newTransmogGuid);
+// This will be replaced by pattern scanning
+uintptr_t updateTransmogOffset = 0x0d62a20;
+// And also for stability better getting this by detouring the menu init function (exe + 0x2be8d2) and the menu pointer is parameter 1 (RCX)
+uintptr_t menuPointerOffset = 0x99a2170;
