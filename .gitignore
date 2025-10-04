@@ -55,3 +55,4 @@ output/
 
 # libraries
 !HZDR_ArmorFix/src/external/minhook/lib/*.lib
+!HZDR_ArmorFix/src/external/scanlib/lib/*.lib

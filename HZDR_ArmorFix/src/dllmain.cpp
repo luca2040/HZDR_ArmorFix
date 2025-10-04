@@ -10,6 +10,13 @@
 #pragma comment(lib, "libMinHook.x86.lib")
 #endif
 
+#include "external/scanlib/include/scanlib.h"
+#ifdef _DEBUG
+#pragma comment(lib, "scanlib_Debug.lib")
+#elif NDEBUG
+#pragma comment(lib, "scanlib_Release.lib")
+#endif
+
 #define modName "HZDR_ArmorFix"
 #include "winmmProxy.h"
 #include "gameStructures.h"
@@ -33,7 +40,7 @@ void exampleSetArmor()
 
     // Examples obtained with the detoured updateTransmog function:
     // Each one of these is a specific armor
-    
+
     // 9be73d2f-100f-44ee-8886-7c1c0f5d13dd
     // 8cf2e62b-24f5-4c73-b750-f88ce3d0444b
     // a23db10b-1ccd-4c22-b665-2785b119922b
@@ -77,6 +84,26 @@ void modMain()
 
     HMODULE h = GetModuleHandleA(NULL);
     uintptr_t baseExeAddr = (uintptr_t)h;
+
+    MemoryPattern updateTransmogScan{updateTransmogSignatureStr};
+    MemoryPattern resetMenuScan{resetMenuSignatureStr};
+    MemoryPattern applyMenuDataScan{applyMenuDataSignatureStr};
+
+    Scanlib_AddPattern(&updateTransmogScan);
+    Scanlib_AddPattern(&resetMenuScan);
+    Scanlib_AddPattern(&applyMenuDataScan);
+
+    std::cout << "Starting scan" << std::endl;
+
+    ScanlibResult res = Scanlib_Search();
+    if (res != SCANLIB_OK)
+    {
+        MessageBoxA(nullptr, "Cannot scan memory", modName, MB_ICONERROR);
+        return;
+    }
+
+    if (updateTransmogScan.foundAddr)
+        std::cout << "updateTransmog function SCANNED at: " << (uintptr_t)updateTransmogScan.foundAddr << std::endl;
 
     updateTransmog = (updateTransmog_t)(baseExeAddr + updateTransmogOffset);
     menuPointerAddress = (Menu **)(baseExeAddr + menuPointerOffset);
