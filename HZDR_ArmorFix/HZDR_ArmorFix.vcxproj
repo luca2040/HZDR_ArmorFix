@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\external\scanlib\src\scanlib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\external\minhook\include\MinHook.h" />
@@ -30,14 +31,6 @@
   <ItemGroup>
     <Library Include="src\external\minhook\lib\libMinHook.x64.lib" />
     <Library Include="src\external\minhook\lib\libMinHook.x86.lib" />
-    <Library Include="src\external\scanlib\lib\scanlib_Debug.lib">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-    </Library>
-    <Library Include="src\external\scanlib\lib\scanlib_Release.lib">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </Library>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -101,7 +94,7 @@
     <TargetName>HZDRArmorFix</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>HZDRArmorFix</TargetName>
+    <TargetName>winmm</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

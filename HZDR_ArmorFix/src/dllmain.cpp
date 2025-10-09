@@ -11,11 +11,6 @@
 #endif
 
 #include "external/scanlib/include/scanlib.h"
-#ifdef _DEBUG
-#pragma comment(lib, "scanlib_Debug.lib")
-#elif NDEBUG
-#pragma comment(lib, "scanlib_Release.lib")
-#endif
 
 #define modName "HZDR_ArmorFix"
 #include "winmmProxy.h"
