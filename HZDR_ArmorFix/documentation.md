@@ -91,3 +91,31 @@ Signature:
 ```
 48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 30 48 8B 35 ? ? ? ? 33 FF 4C 8B E9 48 85 F6
 ```
+
+---
+
+Function:
+
+```c
+void __fastcall syncUIElements(DataSourceOutfitInventory *dataSourceUI, void *currentUIPointer, InventoryEntity *itemEntity, int param_4, uint64_t param_5, uint32_t param_6)
+```
+
+Signature:
+
+```
+48 89 5C 24 10 44 89 4C 24 20 55 56 57 41 56 41 57 48 83 EC 30 48 8B FA 48 8B D9
+```
+
+---
+
+Function:
+
+```c
+uint64_t __fastcall checkItemEquipped(EquipementSlotComponent *selectedArmorSlot, InventoryEntity *item, int *resultArray)
+```
+
+Signature:
+
+```
+48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 30 4D 8B F8 4C 8B F2 48 8B F9 48
+```
