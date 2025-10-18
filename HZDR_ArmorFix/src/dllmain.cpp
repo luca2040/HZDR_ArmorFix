@@ -21,6 +21,7 @@
 
 updateTransmog_t updateTransmog;
 checkItemEquipped_t checkItemEquipped;
+FUN_141114c30_t FUN_141114c30;
 Menu *menuPointer;
 
 resetMenu_t resetMenu;
@@ -29,6 +30,72 @@ applyMenuData_t applyMenuData;
 applyMenuData_t applyMenuData_original;
 syncUIElements_t syncUIElements;
 syncUIElements_t syncUIElements_original;
+
+// #######################################################
+
+// The same logic the game uses straight from its code
+bool isTransmogApplied(DataSourceOutfitInventory *dataSourceUI, InventoryEntity *itemEntity)
+{
+    bool isTransmogApplied;
+    int local_res20[2];
+    EquipementSlotComponent *selectedArmorSlot = dataSourceUI->equipmentSlot;
+    uint64_t lVar7 = checkItemEquipped(selectedArmorSlot, itemEntity, local_res20);
+    if ((lVar7 == 0) || (*(char *)(lVar7 + 0x28) != '\x05'))
+    {
+        isTransmogApplied = false;
+    }
+    else
+    {
+        local_res20[0] = -1;
+        checkItemEquipped(selectedArmorSlot, itemEntity, local_res20);
+        isTransmogApplied = local_res20[0] == 1;
+    }
+    return isTransmogApplied;
+}
+
+InventoryEntity *getSelectedTransmogInvEntity(DataSourceOutfitInventory *dataSourceUI)
+{
+    // Iterate all item entities
+    // This is kind of a mess since its just copy-pasted from Ghidra and i completely decompiled just what i needed
+    char cVar3;
+    int *piVar15 = (int *)((unsigned char *)dataSourceUI->humanoidInventory + 0x38);
+    if (dataSourceUI->humanoidInventory == 0)
+    {
+        piVar15 = (int *)0x58;
+    }
+    long long *plVar20 = *(long long **)(piVar15 + 2);
+    long long *plVar12 = plVar20 + *piVar15;
+    long long *local_res20 = plVar12;
+    InventoryEntity *currentInvEntity = nullptr;
+    if (plVar20 != plVar12)
+    {
+        do
+        {
+            currentInvEntity = (InventoryEntity *)(*plVar20);
+            if ((currentInvEntity) && (cVar3 = FUN_141114c30(*(uint64_t *)&dataSourceUI->inventoryCapacityComponent, currentInvEntity), plVar12 = local_res20, cVar3 == '\x04'))
+            {
+                // I dont know what this line does because even without it everything its fine, but it seems that for my use case it just crashes the game
+                // Also it needs an unstable offset reference in game code that will almost certainly break with an update, so better avoid it
+                // currentInvEntity = (InventoryEntity *)iterateGameElement(currentInvEntity + 0x2a0, (short *)(baseGameAddr + 0x213cb80));
+                plVar12 = local_res20;
+
+                if (currentInvEntity)
+                {
+                    bool transmogApplied = isTransmogApplied(dataSourceUI, currentInvEntity);
+                    // char *itemName = currentInvEntity->itemName;
+                    // std::cout << "syncUIElements: - " << itemName << " - Applied: " << (transmogApplied ? "True" : "False") << std::endl;
+                    if (transmogApplied)
+                        return currentInvEntity;
+                }
+            }
+            plVar20++;
+        } while (plVar20 != plVar12);
+    }
+
+    return nullptr;
+}
+
+// #######################################################
 
 Menu *__fastcall resetMenu_detour(Menu *_menuPointer)
 {
@@ -48,40 +115,49 @@ void *applyMenuData_detour(void *param_1)
     {
         EquipementViewController *equipement = menuPointer->menuViewControllers
                                                    ->playerViewController;
-        char *itemName = equipement
-                             ->selectedArmorSlot
-                             ->transmogInventoryEntity
-                             ->itemName;
+        // char *itemName = equipement
+        //                      ->selectedArmorSlot
+        //                      ->transmogInventoryEntity
+        //                      ->itemName;
 
-        std::cout << "Equipement view controller: " << equipement
-                  << " - Item name: " << itemName << std::endl;
+        // std::cout << "Equipement view controller: " << equipement
+        //           << " - Item name: " << itemName << std::endl;
+
+        std::cout << "Equipement view controller: " << equipement << std::endl;
     }
+
+    // Apply the transmog fix here
 
     return callResult;
 }
 
+// This funciton is just used to get the dataSourceUI while testing, hopefully i can pointer scan for it and find a stable path without needing this abomination
 void __fastcall syncUIElements_detour(DataSourceOutfitInventory *dataSourceUI, void *currentUIPointer,
                                       InventoryEntity *itemEntity, int param_4, uint64_t param_5, uint32_t param_6)
 {
     syncUIElements_original(dataSourceUI, currentUIPointer, itemEntity, param_4, param_5, param_6);
 
-    bool isTransmogApplied;
-    int local_res20[2];
-    EquipementSlotComponent *selectedArmorSlot = dataSourceUI->equipmentSlot;
-    uint64_t lVar7 = checkItemEquipped(selectedArmorSlot, itemEntity, local_res20);
-    if ((lVar7 == 0) || (*(char *)(lVar7 + 0x28) != '\x05'))
+    std::cout << std::endl
+              << std::endl;
+
+    // This will be the final approach to get the inventory entity of the selected one
+    InventoryEntity *selectedTransmog = getSelectedTransmogInvEntity(dataSourceUI);
+    if (selectedTransmog)
     {
-        isTransmogApplied = false;
+        std::cout << "Found the applied transmog: - " << selectedTransmog->itemName << std::endl;
     }
     else
     {
-        local_res20[0] = -1;
-        checkItemEquipped(selectedArmorSlot, itemEntity, local_res20);
-        isTransmogApplied = local_res20[0] == 1;
+        std::cout << "No transmog applied" << std::endl;
     }
 
+    std::cout << std::endl
+              << std::endl;
+
+    // Just print the one from the function args to test
+    bool transmogApplied = isTransmogApplied(dataSourceUI, itemEntity);
     char *itemName = itemEntity->itemName;
-    std::cout << "syncUIElements: - " << itemName << " - Applied: " << (isTransmogApplied ? "True" : "False") << std::endl;
+    std::cout << "syncUIElements: - " << itemName << " - Applied: " << (transmogApplied ? "True" : "False") << std::endl;
 
     return;
 }
@@ -104,12 +180,14 @@ void modMain()
     MemoryPattern applyMenuDataScan{applyMenuDataSignatureStr};
     MemoryPattern syncUIElementsScan{syncUIElementsSignatureStr};
     MemoryPattern checkItemEquippedScan{checkItemEquippedSignatureStr};
+    MemoryPattern FUN_141114c30Scan{FUN_141114c30SignatureStr};
 
     Scanlib_AddPattern(&updateTransmogScan);
     Scanlib_AddPattern(&resetMenuScan);
     Scanlib_AddPattern(&applyMenuDataScan);
     Scanlib_AddPattern(&syncUIElementsScan);
     Scanlib_AddPattern(&checkItemEquippedScan);
+    Scanlib_AddPattern(&FUN_141114c30Scan);
 
     std::cout << "Starting scan" << std::endl;
 
@@ -131,12 +209,15 @@ void modMain()
         std::cout << "syncUIElements function found at: " << syncUIElementsScan.foundAddr << std::endl;
     if (checkItemEquippedScan.foundAddr)
         std::cout << "checkItemEquipped function found at: " << checkItemEquippedScan.foundAddr << std::endl;
+    if (FUN_141114c30Scan.foundAddr)
+        std::cout << "FUN_141114c30 function found at: " << FUN_141114c30Scan.foundAddr << std::endl;
 
     if ((!updateTransmogScan.foundAddr) ||
         (!resetMenuScan.foundAddr) ||
         (!applyMenuDataScan.foundAddr) ||
         (!syncUIElementsScan.foundAddr) ||
-        (!checkItemEquippedScan.foundAddr))
+        (!checkItemEquippedScan.foundAddr) ||
+        (!FUN_141114c30Scan.foundAddr))
     {
         MessageBoxA(nullptr, "Error finding functions", modName, MB_ICONERROR);
         return;
@@ -147,6 +228,7 @@ void modMain()
     applyMenuData = reinterpret_cast<applyMenuData_t>(applyMenuDataScan.foundAddr);
     syncUIElements = reinterpret_cast<syncUIElements_t>(syncUIElementsScan.foundAddr);
     checkItemEquipped = reinterpret_cast<checkItemEquipped_t>(checkItemEquippedScan.foundAddr);
+    FUN_141114c30 = reinterpret_cast<FUN_141114c30_t>(FUN_141114c30Scan.foundAddr);
 
     if (MH_Initialize() != MH_OK)
     {
