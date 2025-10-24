@@ -19,7 +19,8 @@
 
 // #######################################################
 
-updateTransmog_t updateTransmog;
+// updateTransmog_t updateTransmog;
+directUpdateTransmog_t directUpdateTransmog;
 checkItemEquipped_t checkItemEquipped;
 FUN_141114c30_t FUN_141114c30;
 Menu *menuPointer;
@@ -97,36 +98,57 @@ InventoryEntity *getSelectedTransmogInvEntity(DataSourceOutfitInventory *dataSou
 
 // #######################################################
 
+// Just for testing
+InventoryEntity *oldSelectedTransmg = nullptr;
+
 Menu *__fastcall resetMenu_detour(Menu *_menuPointer)
 {
     menuPointer = _menuPointer;
     return resetMenu_original(_menuPointer);
 }
 
+FUN_140db0f00_t FUN_140db0f00;
+FUN_140db0f00_t FUN_140db0f00_original;
+
+// Temporary shitty test
+void FUN_140db0f00_detour(EquipementViewController *playerViewController, uint8_t param_2, void *param_3, void *selectedTransmog)
+{
+    if (selectedTransmog)
+    {
+        typedef char *(*getGuid_t)(void *thisPtr, uint8_t param_1);
+
+        uintptr_t vtable = *(uintptr_t *)selectedTransmog;
+        getGuid_t getGuid = *(getGuid_t *)(vtable + 0x28);
+
+        char *transmogGuid = getGuid(selectedTransmog, 0); // Call selectedTransmog.getGuid(0)
+        std::cout << "transmog class instance: " << reinterpret_cast<uintptr_t>(selectedTransmog)
+                  << " vtable: " << vtable
+                  << " guid: " << transmogGuid << std::endl;
+    }
+    return FUN_140db0f00_original(playerViewController, param_2, param_3, selectedTransmog);
+}
+
 void *applyMenuData_detour(void *param_1)
 {
     void *callResult = applyMenuData_original(param_1);
 
+    if (menuPointer)
+    {
+        std::cout << "Menu: " << menuPointer << std::endl;
+    }
+
     if (menuPointer &&
         menuPointer->menuViewControllers &&
-        menuPointer->menuViewControllers->playerViewController &&
-        menuPointer->menuViewControllers->playerViewController->selectedArmorSlot &&
-        menuPointer->menuViewControllers->playerViewController->selectedArmorSlot->transmogInventoryEntity)
+        menuPointer->menuViewControllers->playerViewController)
     {
         EquipementViewController *equipement = menuPointer->menuViewControllers
                                                    ->playerViewController;
-        // char *itemName = equipement
-        //                      ->selectedArmorSlot
-        //                      ->transmogInventoryEntity
-        //                      ->itemName;
 
-        // std::cout << "Equipement view controller: " << equipement
-        //           << " - Item name: " << itemName << std::endl;
-
-        std::cout << "Equipement view controller: " << equipement << std::endl;
+        // Apply the transmog fix here
+        // This is just a test - not the actual fix for now
+        // if (oldSelectedTransmg)
+        //     directUpdateTransmog(equipement, oldSelectedTransmg, '\x01', '\0');
     }
-
-    // Apply the transmog fix here
 
     return callResult;
 }
@@ -137,13 +159,11 @@ void __fastcall syncUIElements_detour(DataSourceOutfitInventory *dataSourceUI, v
 {
     syncUIElements_original(dataSourceUI, currentUIPointer, itemEntity, param_4, param_5, param_6);
 
-    std::cout << std::endl
-              << std::endl;
-
     // This will be the final approach to get the inventory entity of the selected one
     InventoryEntity *selectedTransmog = getSelectedTransmogInvEntity(dataSourceUI);
     if (selectedTransmog)
     {
+        oldSelectedTransmg = selectedTransmog;
         std::cout << "Found the applied transmog: - " << selectedTransmog->itemName << std::endl;
     }
     else
@@ -151,13 +171,11 @@ void __fastcall syncUIElements_detour(DataSourceOutfitInventory *dataSourceUI, v
         std::cout << "No transmog applied" << std::endl;
     }
 
-    std::cout << std::endl
-              << std::endl;
-
     // Just print the one from the function args to test
     bool transmogApplied = isTransmogApplied(dataSourceUI, itemEntity);
     char *itemName = itemEntity->itemName;
-    std::cout << "syncUIElements: - " << itemName << " - Applied: " << (transmogApplied ? "True" : "False") << std::endl;
+    std::cout << "syncUIElements: - " << itemName << " - Applied: " << (transmogApplied ? "True" : "False") << std::endl
+              << "dataSourceUI: " << dataSourceUI << std::endl;
 
     return;
 }
@@ -175,19 +193,24 @@ void modMain()
 
     std::cout << "Starting " << modName << std::endl;
 
-    MemoryPattern updateTransmogScan{updateTransmogSignatureStr};
+    // MemoryPattern updateTransmogScan{updateTransmogSignatureStr};
     MemoryPattern resetMenuScan{resetMenuSignatureStr};
     MemoryPattern applyMenuDataScan{applyMenuDataSignatureStr};
     MemoryPattern syncUIElementsScan{syncUIElementsSignatureStr};
     MemoryPattern checkItemEquippedScan{checkItemEquippedSignatureStr};
     MemoryPattern FUN_141114c30Scan{FUN_141114c30SignatureStr};
+    MemoryPattern directUpdateTransmogScan{directUpdateTransmogSignatureStr};
 
-    Scanlib_AddPattern(&updateTransmogScan);
+    MemoryPattern FUN_140db0f00Scan{testFuncTransmogSignature};
+    Scanlib_AddPattern(&FUN_140db0f00Scan);
+
+    // Scanlib_AddPattern(&updateTransmogScan);
     Scanlib_AddPattern(&resetMenuScan);
     Scanlib_AddPattern(&applyMenuDataScan);
     Scanlib_AddPattern(&syncUIElementsScan);
     Scanlib_AddPattern(&checkItemEquippedScan);
     Scanlib_AddPattern(&FUN_141114c30Scan);
+    Scanlib_AddPattern(&directUpdateTransmogScan);
 
     std::cout << "Starting scan" << std::endl;
 
@@ -199,8 +222,8 @@ void modMain()
     }
 
     // Print them before checking if they are all good to know which one wasnt found in case it isnt
-    if (updateTransmogScan.foundAddr)
-        std::cout << "updateTransmog function found at: " << updateTransmogScan.foundAddr << std::endl;
+    // if (updateTransmogScan.foundAddr)
+    //     std::cout << "updateTransmog function found at: " << updateTransmogScan.foundAddr << std::endl;
     if (resetMenuScan.foundAddr)
         std::cout << "resetMenu function found at: " << resetMenuScan.foundAddr << std::endl;
     if (applyMenuDataScan.foundAddr)
@@ -211,24 +234,31 @@ void modMain()
         std::cout << "checkItemEquipped function found at: " << checkItemEquippedScan.foundAddr << std::endl;
     if (FUN_141114c30Scan.foundAddr)
         std::cout << "FUN_141114c30 function found at: " << FUN_141114c30Scan.foundAddr << std::endl;
+    if (directUpdateTransmogScan.foundAddr)
+        std::cout << "directUpdateTransmog function found at: " << directUpdateTransmogScan.foundAddr << std::endl;
 
-    if ((!updateTransmogScan.foundAddr) ||
+    if (
+        // (!updateTransmogScan.foundAddr) ||
         (!resetMenuScan.foundAddr) ||
         (!applyMenuDataScan.foundAddr) ||
         (!syncUIElementsScan.foundAddr) ||
         (!checkItemEquippedScan.foundAddr) ||
-        (!FUN_141114c30Scan.foundAddr))
+        (!FUN_141114c30Scan.foundAddr) ||
+        (!directUpdateTransmogScan.foundAddr))
     {
         MessageBoxA(nullptr, "Error finding functions", modName, MB_ICONERROR);
         return;
     }
 
-    updateTransmog = reinterpret_cast<updateTransmog_t>(updateTransmogScan.foundAddr);
+    // updateTransmog = reinterpret_cast<updateTransmog_t>(updateTransmogScan.foundAddr);
     resetMenu = reinterpret_cast<resetMenu_t>(resetMenuScan.foundAddr);
     applyMenuData = reinterpret_cast<applyMenuData_t>(applyMenuDataScan.foundAddr);
     syncUIElements = reinterpret_cast<syncUIElements_t>(syncUIElementsScan.foundAddr);
     checkItemEquipped = reinterpret_cast<checkItemEquipped_t>(checkItemEquippedScan.foundAddr);
     FUN_141114c30 = reinterpret_cast<FUN_141114c30_t>(FUN_141114c30Scan.foundAddr);
+    directUpdateTransmog = reinterpret_cast<directUpdateTransmog_t>(directUpdateTransmogScan.foundAddr);
+
+    FUN_140db0f00 = reinterpret_cast<FUN_140db0f00_t>(FUN_140db0f00Scan.foundAddr);
 
     if (MH_Initialize() != MH_OK)
     {
@@ -238,7 +268,10 @@ void modMain()
 
     bool hook1ok = createAndEnableHook(resetMenu, resetMenu_detour, resetMenu_original);
     bool hook2ok = createAndEnableHook(applyMenuData, applyMenuData_detour, applyMenuData_original);
-    bool hook3ok = createAndEnableHook(syncUIElements, syncUIElements_detour, syncUIElements_original);
+    // bool hook3ok = createAndEnableHook(syncUIElements, syncUIElements_detour, syncUIElements_original);
+    bool hook3ok = true;
+
+    createAndEnableHook(FUN_140db0f00, FUN_140db0f00_detour, FUN_140db0f00_original);
 
     if (!(hook1ok && hook2ok && hook3ok))
     {

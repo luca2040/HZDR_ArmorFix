@@ -135,3 +135,17 @@ Signature:
 ```
 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B FA 48 8B F1 48 8D 15 54 3E 02 01 48 8D 8F A0 02 00 00 ? ? ? ? ? 48 85 C0
 ```
+
+---
+
+Function:
+
+```c
+uint64_t __fastcall directUpdateTransmog(EquipementViewController *playerViewController, InventoryEntity *newTransmog, char param_3, char param_4)
+```
+
+Signature:
+
+```
+40 56 41 54 41 56 41 57 48 83 EC 48 45 0F B6 E1 45 0F B6 F8 4C 8B F2
+```
